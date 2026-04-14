@@ -1,0 +1,157 @@
+[
+  {
+    "id": 3,
+    "spanish": "Regalos",
+    "translation": "подарунки"
+  },
+  {
+    "id": 4,
+    "spanish": "Muñeca",
+    "translation": "лялька"
+  },
+  {
+    "id": 5,
+    "spanish": "Espejo",
+    "translation": "дзеркало"
+  },
+  {
+    "id": 6,
+    "spanish": "Retraso",
+    "translation": "затримка"
+  },
+  {
+    "id": 7,
+    "spanish": "Impactada",
+    "translation": "шокована"
+  },
+  {
+    "id": 8,
+    "spanish": "Triste",
+    "translation": "сумна"
+  },
+  {
+    "id": 9,
+    "spanish": "Feliz",
+    "translation": "щаслива"
+  },
+  {
+    "id": 10,
+    "spanish": "Mal",
+    "translation": "погано"
+  },
+  {
+    "id": 11,
+    "spanish": "Sorprendida",
+    "translation": "здивована"
+  },
+  {
+    "id": 12,
+    "spanish": "Positivo",
+    "translation": "позитивний"
+  },
+  {
+    "id": 13,
+    "spanish": "Negativo",
+    "translation": "негативний"
+  },
+  {
+    "id": 14,
+    "spanish": "Náuseas",
+    "translation": "нудота"
+  },
+  {
+    "id": 15,
+    "spanish": "Ojeras",
+    "translation": "темні кола під очима"
+  },
+  {
+    "id": 16,
+    "spanish": "Hospital",
+    "translation": "лікарня"
+  },
+  {
+    "id": 17,
+    "spanish": "Ultrasonido",
+    "translation": "УЗД"
+  },
+  {
+    "id": 18,
+    "spanish": "Ecografía",
+    "translation": "ехографія"
+  },
+  {
+    "id": 19,
+    "spanish": "Acostada",
+    "translation": "лежача"
+  },
+  {
+    "id": 20,
+    "spanish": "Pesadillas",
+    "translation": "кошмари"
+  },
+  {
+    "id": 21,
+    "spanish": "Sueño",
+    "translation": "сон"
+  },
+  {
+    "id": 22,
+    "spanish": "Vacaciones",
+    "translation": "відпустка"
+  },
+  {
+    "id": 23,
+    "spanish": "Playa",
+    "translation": "пляж"
+  },
+  {
+    "id": 24,
+    "spanish": "Terreno",
+    "translation": "ділянка"
+  },
+  {
+    "id": 25,
+    "spanish": "Pequeño terreno",
+    "translation": "маленька ділянка"
+  },
+  {
+    "id": 26,
+    "spanish": "Modesta",
+    "translation": "скромна"
+  },
+  {
+    "id": 27,
+    "spanish": "Tímida",
+    "translation": "сором’язлива"
+  },
+  {
+    "id": 28,
+    "spanish": "Silenciosa",
+    "translation": "тиха"
+  },
+  {
+    "id": 29,
+    "spanish": "Introvertida",
+    "translation": "інтровертна"
+  },
+  {
+    "id": 30,
+    "spanish": "Inadvertida",
+    "translation": "непомітна"
+  },
+  {
+    "id": 31,
+    "spanish": "Soldado",
+    "translation": "солдат"
+  },
+  {
+    "id": 32,
+    "spanish": "Espada",
+    "translation": "меч"
+  },
+  {
+    "id": 33,
+    "spanish": "adios",
+    "translation": "bye"
+  }
+]

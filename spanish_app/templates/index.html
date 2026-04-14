@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Spanish Words</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <main class="page">
+    <section class="card">
+      <h1>Spanish Words</h1>
+      <p class="subtitle">Add words, review them, and flip flashcards.</p>
+
+      <div class="topbar">
+        <div class="topbar-left">
+          Logged in as <strong>{{ username }}</strong>
+        </div>
+        <a class="link-button secondary-button" href="{{ url_for('logout') }}">Logout</a>
+      </div>
+
+      <div id="message-box" class="message-box hidden" role="status" aria-live="polite"></div>
+
+      <form id="word-form" class="word-form">
+        <label for="spanish">Spanish word</label>
+        <input id="spanish" name="spanish" type="text" placeholder="hola" required>
+
+        <label for="translation">Translation</label>
+        <input id="translation" name="translation" type="text" placeholder="Leave empty for auto-translate">
+
+        <label for="target-language">Translate to</label>
+        <select id="target-language" name="target-language">
+          <option value="en" selected>English</option>
+          <option value="uk">Ukrainian</option>
+        </select>
+
+        <button type="submit">Add</button>
+      </form>
+    </section>
+
+    <section class="card">
+      <div class="section-header">
+        <h2>Word List</h2>
+        <div class="word-list-actions">
+          <span id="word-count">0 words</span>
+          <button id="toggle-word-list" type="button" class="secondary-button hidden">Show all</button>
+        </div>
+      </div>
+      <ul id="word-list" class="word-list">
+        <li class="empty-state">No words yet.</li>
+      </ul>
+    </section>
+
+    <section class="card">
+      <div class="section-header">
+        <h2>Flashcard</h2>
+        <button id="next-card" type="button" class="secondary-button">Next</button>
+      </div>
+      <div id="flashcard" class="flashcard" role="button" tabindex="0" aria-label="Flip flashcard">
+        <div class="flashcard-face flashcard-front">
+          <span class="flashcard-label">Spanish</span>
+          <p id="flashcard-front-text">Add a word to begin</p>
+        </div>
+        <div class="flashcard-face flashcard-back">
+          <span class="flashcard-label">Translation</span>
+          <p id="flashcard-back-text">Translation will appear here</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="section-header">
+        <h2>Test Mode</h2>
+        <button id="start-test" type="button" class="secondary-button">Start Test</button>
+      </div>
+
+      <div class="test-panel">
+        <div class="test-prompt hidden" id="test-prompt" aria-live="polite">
+          <div class="test-word-row">
+            <span class="test-word-label">Spanish word</span>
+            <div id="test-spanish-word" class="test-word">...</div>
+          </div>
+
+          <form id="test-form" class="test-form">
+            <label for="test-translation">Your translation</label>
+            <input id="test-translation" type="text" placeholder="Type translation" autocomplete="off">
+            <button id="submit-test" type="submit">Submit</button>
+          </form>
+        </div>
+
+        <div id="test-result" class="test-result hidden" role="status" aria-live="polite"></div>
+        <div id="test-summary" class="test-summary hidden" aria-live="polite"></div>
+        <button id="retry-test" type="button" class="secondary-button hidden">Retry Test</button>
+      </div>
+    </section>
+  </main>
+
+  <script src="{{ url_for('static', filename='app.js') }}"></script>
+</body>
+</html>

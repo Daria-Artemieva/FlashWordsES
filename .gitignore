@@ -1,0 +1,13 @@
+__pycache__/
+*.py[cod]
+*.pyo
+.Python
+
+.DS_Store
+.idea/
+
+# Local DB and backups
+spanish_app/app.db
+spanish_app/*.db
+spanish_app/*.sqlite*
+

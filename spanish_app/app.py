@@ -295,7 +295,10 @@ def add_word(user):
     if not translation:
         translation = translate_word(spanish, target_language)
         if not translation:
-            return jsonify({"error": "Auto-translation is unavailable right now."}), 503
+            return (
+                jsonify({"error": "Translation is required (auto-translation is disabled)."}),
+                400,
+            )
 
     spanish_norm = normalize_spanish(spanish)
     try:

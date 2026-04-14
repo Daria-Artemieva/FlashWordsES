@@ -199,6 +199,14 @@ def add_cors_headers(response):
     response.headers["Access-Control-Allow-Origin"] = "*"
     response.headers["Access-Control-Allow-Headers"] = "Content-Type"
     response.headers["Access-Control-Allow-Methods"] = "GET, POST, DELETE, OPTIONS"
+
+    # Auth pages should never be cached by a CDN/browser. Otherwise you can see
+    # a stale "/" page after logout, while API calls correctly return 401.
+    if response.mimetype == "text/html":
+        response.headers["Cache-Control"] = "no-store"
+        response.headers["Pragma"] = "no-cache"
+        response.headers["Expires"] = "0"
+
     return response
 
 

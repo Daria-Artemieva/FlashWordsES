@@ -7,17 +7,11 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
+  <a class="link-button secondary-button logout-fab" href="{{ url_for('logout') }}">Logout</a>
   <main class="page">
     <section class="card">
       <h1>Spanish Words</h1>
       <p class="subtitle">Add words, review them, and flip flashcards.</p>
-
-      <div class="topbar">
-        <div class="topbar-right">
-          <span class="user-pill" title="Logged in as">{{ username }}</span>
-          <a class="link-button secondary-button" href="{{ url_for('logout') }}">Logout</a>
-        </div>
-      </div>
 
       <div id="message-box" class="message-box hidden" role="status" aria-live="polite"></div>
 

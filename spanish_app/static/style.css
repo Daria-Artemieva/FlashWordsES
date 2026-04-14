@@ -39,42 +39,29 @@ body {
   width: min(520px, calc(100% - 32px));
 }
 
-.topbar {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 12px;
-  margin: 6px 0 18px;
-  padding: 10px 12px;
-  border: 1px solid var(--panel-border);
-  border-radius: 14px;
-  background: rgba(255, 255, 255, 0.65);
-}
-
-.topbar-right {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 10px;
-}
-
-.user-pill {
-  display: inline-flex;
-  align-items: center;
-  padding: 9px 12px;
-  border-radius: 12px;
-  border: 1px solid var(--panel-border);
-  background: rgba(37, 99, 235, 0.08);
-  color: #1e3a8a;
-  font-weight: 800;
-  line-height: 1;
-}
-
 .link-button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   text-decoration: none;
+}
+
+.logout-fab {
+  position: fixed;
+  top: 18px;
+  right: 18px;
+  z-index: 50;
+  padding: 10px 14px;
+  border-radius: 999px;
+  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.12);
+}
+
+.logout-fab:hover {
+  transform: translateY(-1px);
+}
+
+.logout-fab:active {
+  transform: translateY(0);
 }
 
 .auth-links {

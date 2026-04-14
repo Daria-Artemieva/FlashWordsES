@@ -42,9 +42,20 @@ app = Flask(
 )
 
 IS_VERCEL = os.environ.get("VERCEL") == "1"
+IS_FROZEN = bool(getattr(sys, "frozen", False))
 DATABASE_URL = os.environ.get("DATABASE_URL")
 USING_POSTGRES = bool(DATABASE_URL)
-DEFAULT_DATA_DIR = Path("/tmp/flashwordses") if IS_VERCEL else BASE_DIR
+
+def _default_data_dir() -> Path:
+    if IS_VERCEL:
+        return Path("/tmp/flashwordses")
+    if IS_FROZEN:
+        base = Path(os.environ.get("APPDATA") or Path.home())
+        return base / "FlashWordsES"
+    return BASE_DIR
+
+
+DEFAULT_DATA_DIR = _default_data_dir()
 DATA_DIR = Path(os.environ.get("DATA_DIR", str(DEFAULT_DATA_DIR))).resolve()
 DATA_FILE = Path(__file__).with_name("data.json")
 DB_FILE = Path(os.environ.get("DB_PATH", str(DATA_DIR / "app.db"))).resolve()
@@ -122,6 +133,75 @@ init_db()
 
 def normalize_spanish(text):
     return text.strip().casefold()
+
+
+SEED_WORDS = [
+    {"spanish": "Regalos", "translation": "gifts"},
+    {"spanish": "Muñeca", "translation": "doll"},
+    {"spanish": "Espejo", "translation": "mirror"},
+    {"spanish": "Retraso", "translation": "delay"},
+    {"spanish": "Impactada", "translation": "shocked"},
+    {"spanish": "Triste", "translation": "sad"},
+    {"spanish": "Feliz", "translation": "happy"},
+    {"spanish": "Mal", "translation": "bad"},
+    {"spanish": "Sorprendida", "translation": "surprised"},
+    {"spanish": "Positivo", "translation": "positive"},
+    {"spanish": "Negativo", "translation": "negative"},
+    {"spanish": "Náuseas", "translation": "nausea"},
+    {"spanish": "Ojeras", "translation": "dark circles under the eyes"},
+    {"spanish": "Hospital", "translation": "hospital"},
+    {"spanish": "Ultrasonido", "translation": "ultrasound"},
+    {"spanish": "Ecografía", "translation": "echography"},
+    {"spanish": "Acostada", "translation": "lying down"},
+    {"spanish": "Pesadillas", "translation": "nightmares"},
+    {"spanish": "Sueño", "translation": "sleep"},
+    {"spanish": "Vacaciones", "translation": "vacation"},
+    {"spanish": "Playa", "translation": "beach"},
+    {"spanish": "Terreno", "translation": "plot of land"},
+    {"spanish": "Pequeño terreno", "translation": "small plot of land"},
+    {"spanish": "Modesta", "translation": "modest"},
+    {"spanish": "Tímida", "translation": "shy"},
+    {"spanish": "Silenciosa", "translation": "quiet"},
+    {"spanish": "Introvertida", "translation": "introverted"},
+    {"spanish": "Inadvertida", "translation": "unnoticed"},
+    {"spanish": "Soldado", "translation": "soldier"},
+    {"spanish": "Espada", "translation": "sword"},
+]
+
+
+def seed_public_words_if_empty():
+    with get_db() as conn:
+        has_any = conn.execute("SELECT 1 FROM public_words LIMIT 1").fetchone()
+        if has_any:
+            return
+
+        for item in SEED_WORDS:
+            spanish = (item.get("spanish") or "").strip()
+            translation = (item.get("translation") or "").strip()
+            if not spanish or not translation:
+                continue
+
+            spanish_norm = normalize_spanish(spanish)
+            if USING_POSTGRES:
+                conn.execute(
+                    """
+                    INSERT INTO public_words (spanish, spanish_norm, translation)
+                    VALUES (%s, %s, %s)
+                    ON CONFLICT (spanish_norm) DO NOTHING
+                    """,
+                    (spanish, spanish_norm, translation),
+                )
+            else:
+                conn.execute(
+                    """
+                    INSERT OR IGNORE INTO public_words (spanish, spanish_norm, translation)
+                    VALUES (?, ?, ?)
+                    """,
+                    (spanish, spanish_norm, translation),
+                )
+
+
+seed_public_words_if_empty()
 
 
 def contains_digits(text):

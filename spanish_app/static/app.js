@@ -33,6 +33,12 @@ let testCorrect = 0;
 let testIncorrect = 0;
 let testAdvanceTimeoutId = null;
 
+function updateControls() {
+  const hasWords = words.length > 0;
+  nextCardButton.disabled = !hasWords;
+  startTestButton.disabled = !hasWords;
+}
+
 function showMessage(text, type, options = {}) {
   const { autoHideMs = null } = options;
 
@@ -79,6 +85,7 @@ async function loadWords() {
     words = await fetchWords();
     renderWordList();
     updateFlashcard();
+    updateControls();
   } catch (error) {
     console.error("Failed to load words:", error);
   }
@@ -109,6 +116,7 @@ async function addWord(spanish, translation, targetLanguage) {
     isCardFlipped = false;
     renderWordList();
     updateFlashcard();
+    updateControls();
     showMessage("Word added successfully.", "success", { autoHideMs: 2500 });
     return true;
   } catch (error) {
@@ -138,6 +146,7 @@ async function deleteWord(wordId) {
     isCardFlipped = false;
     renderWordList();
     updateFlashcard();
+    updateControls();
     showMessage("Word deleted successfully.", "success", { autoHideMs: 2500 });
   } catch (error) {
     console.error("Failed to delete word:", error);
@@ -416,3 +425,4 @@ nextCardButton.addEventListener("click", showNextCard);
 toggleWordListButton.addEventListener("click", toggleWordList);
 
 loadWords();
+updateControls();

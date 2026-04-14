@@ -21,7 +21,7 @@ body {
   min-height: 100vh;
   font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
   background:
-    linear-gradient(rgba(244, 247, 251, 0.78), rgba(244, 247, 251, 0.9)),
+    linear-gradient(rgba(244, 247, 251, 0.55), rgba(244, 247, 251, 0.72)),
     url("/static/barcelona-bg.png") center / cover fixed no-repeat,
     radial-gradient(circle at top, rgba(37, 99, 235, 0.12), transparent 30%),
     var(--bg);
@@ -229,6 +229,15 @@ button:hover {
 
 button:active {
   transform: translateY(0);
+}
+
+button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+button:disabled:hover {
+  transform: none;
 }
 
 .word-form button,

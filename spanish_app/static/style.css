@@ -35,48 +35,11 @@ body {
   gap: 20px;
 }
 
-.auth-page {
-  width: min(520px, calc(100% - 32px));
-}
-
 .link-button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   text-decoration: none;
-}
-
-.logout-fab {
-  position: fixed;
-  top: 18px;
-  right: 18px;
-  z-index: 50;
-  padding: 10px 14px;
-  border-radius: 999px;
-  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.12);
-}
-
-.logout-fab:hover {
-  transform: translateY(-1px);
-}
-
-.logout-fab:active {
-  transform: translateY(0);
-}
-
-.auth-links {
-  margin: 16px 0 0;
-  color: var(--muted);
-}
-
-.auth-links a {
-  color: var(--primary);
-  font-weight: 700;
-  text-decoration: none;
-}
-
-.auth-links a:hover {
-  text-decoration: underline;
 }
 
 .card {

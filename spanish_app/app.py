@@ -6,8 +6,7 @@ import sys
 import types
 from pathlib import Path
 
-from flask import Flask, jsonify, redirect, render_template, request, session, url_for
-from werkzeug.security import check_password_hash, generate_password_hash
+from flask import Flask, jsonify, render_template, request
 
 if "cgi" not in sys.modules:
     cgi_module = types.ModuleType("cgi")
@@ -40,7 +39,6 @@ app = Flask(
     template_folder=str(BASE_DIR / "templates"),
     static_folder=str(BASE_DIR / "static"),
 )
-app.secret_key = os.environ.get("SECRET_KEY", "dev-secret-key-change-me")
 
 IS_VERCEL = os.environ.get("VERCEL") == "1"
 DATABASE_URL = os.environ.get("DATABASE_URL")
@@ -75,25 +73,13 @@ def init_db():
         conn.execute("PRAGMA foreign_keys = ON")
         conn.execute(
             """
-            CREATE TABLE IF NOT EXISTS users (
+            CREATE TABLE IF NOT EXISTS public_words (
               id INTEGER PRIMARY KEY AUTOINCREMENT,
-              username TEXT NOT NULL UNIQUE,
-              password_hash TEXT NOT NULL,
-              created_at TEXT NOT NULL DEFAULT (datetime('now'))
-            )
-            """
-        )
-        conn.execute(
-            """
-            CREATE TABLE IF NOT EXISTS words (
-              id INTEGER PRIMARY KEY AUTOINCREMENT,
-              user_id INTEGER NOT NULL,
               spanish TEXT NOT NULL,
               spanish_norm TEXT NOT NULL,
               translation TEXT NOT NULL,
               created_at TEXT NOT NULL DEFAULT (datetime('now')),
-              FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-              UNIQUE(user_id, spanish_norm)
+              UNIQUE(spanish_norm)
             )
             """
         )
@@ -104,24 +90,13 @@ def init_db():
         with get_db() as conn:
             conn.execute(
                 """
-                CREATE TABLE IF NOT EXISTS users (
+                CREATE TABLE IF NOT EXISTS public_words (
                   id BIGSERIAL PRIMARY KEY,
-                  username TEXT NOT NULL UNIQUE,
-                  password_hash TEXT NOT NULL,
-                  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-                )
-                """
-            )
-            conn.execute(
-                """
-                CREATE TABLE IF NOT EXISTS words (
-                  id BIGSERIAL PRIMARY KEY,
-                  user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
                   spanish TEXT NOT NULL,
                   spanish_norm TEXT NOT NULL,
                   translation TEXT NOT NULL,
                   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-                  UNIQUE(user_id, spanish_norm)
+                  UNIQUE(spanish_norm)
                 )
                 """
             )
@@ -167,41 +142,12 @@ def translate_word(spanish, target_language):
         return None
 
 
-def get_current_user():
-    user_id = session.get("user_id")
-    if not user_id:
-        return None
-
-    with get_db() as conn:
-        if USING_POSTGRES:
-            row = conn.execute("SELECT id, username FROM users WHERE id = %s", (user_id,)).fetchone()
-        else:
-            row = conn.execute("SELECT id, username FROM users WHERE id = ?", (user_id,)).fetchone()
-        if not row:
-            session.pop("user_id", None)
-            return None
-        return {"id": row["id"], "username": row["username"]}
-
-
-def login_required_json(fn):
-    def wrapper(*args, **kwargs):
-        user = get_current_user()
-        if not user:
-            return jsonify({"error": "Authentication required."}), 401
-        return fn(user, *args, **kwargs)
-
-    wrapper.__name__ = fn.__name__
-    return wrapper
-
-
 @app.after_request
 def add_cors_headers(response):
     response.headers["Access-Control-Allow-Origin"] = "*"
     response.headers["Access-Control-Allow-Headers"] = "Content-Type"
     response.headers["Access-Control-Allow-Methods"] = "GET, POST, DELETE, OPTIONS"
 
-    # Auth pages should never be cached by a CDN/browser. Otherwise you can see
-    # a stale "/" page after logout, while API calls correctly return 401.
     if response.mimetype == "text/html":
         response.headers["Cache-Control"] = "no-store"
         response.headers["Pragma"] = "no-cache"
@@ -212,180 +158,21 @@ def add_cors_headers(response):
 
 @app.route("/")
 def home():
-    user = get_current_user()
-    if not user:
-        return redirect(url_for("login"))
-    return render_template("index.html", username=user["username"])
-
-
-@app.route("/login", methods=["GET", "POST"])
-def login():
-    if request.method == "GET":
-        if get_current_user():
-            return redirect(url_for("home"))
-        return render_template("login.html")
-
-    username = (request.form.get("username") or "").strip()
-    password = request.form.get("password") or ""
-
-    if not username or not password:
-        return render_template("login.html", error="Username and password are required."), 400
-
-    with get_db() as conn:
-        if USING_POSTGRES:
-            row = conn.execute(
-                "SELECT id, password_hash FROM users WHERE username = %s",
-                (username,),
-            ).fetchone()
-        else:
-            row = conn.execute(
-                "SELECT id, password_hash FROM users WHERE username = ?",
-                (username,),
-            ).fetchone()
-
-    if not row or not check_password_hash(row["password_hash"], password):
-        return render_template("login.html", error="Invalid username or password."), 401
-
-    session["user_id"] = row["id"]
-    return redirect(url_for("home"))
-
-
-def _maybe_import_legacy_words_for_user(user_id: int):
-    # Small convenience: if this project previously used data.json,
-    # import those words into the first registered user's account.
-    if not DATA_FILE.exists():
-        return
-
-    with get_db() as conn:
-        any_words = conn.execute("SELECT 1 FROM words LIMIT 1").fetchone()
-        if any_words:
-            return
-
-    try:
-        with DATA_FILE.open("r", encoding="utf-8") as file:
-            legacy = json.load(file)
-    except Exception:
-        return
-
-    if not isinstance(legacy, list):
-        return
-
-    to_insert = []
-    for item in legacy:
-        if not isinstance(item, dict):
-            continue
-        spanish = (item.get("spanish") or "").strip()
-        translation = (item.get("translation") or "").strip()
-        if not spanish or not translation:
-            continue
-        to_insert.append((user_id, spanish, normalize_spanish(spanish), translation))
-
-    if not to_insert:
-        return
-
-    with get_db() as conn:
-        if USING_POSTGRES:
-            for args in to_insert:
-                conn.execute(
-                    """
-                    INSERT INTO words (user_id, spanish, spanish_norm, translation)
-                    VALUES (%s, %s, %s, %s)
-                    ON CONFLICT (user_id, spanish_norm) DO NOTHING
-                    """,
-                    args,
-                )
-        else:
-            conn.executemany(
-                """
-                INSERT OR IGNORE INTO words (user_id, spanish, spanish_norm, translation)
-                VALUES (?, ?, ?, ?)
-                """,
-                to_insert,
-            )
-
-
-@app.route("/register", methods=["GET", "POST"])
-def register():
-    if request.method == "GET":
-        if get_current_user():
-            return redirect(url_for("home"))
-        return render_template("register.html")
-
-    username = (request.form.get("username") or "").strip()
-    password = request.form.get("password") or ""
-    password2 = request.form.get("password2") or ""
-
-    if not username or not password or not password2:
-        return render_template("register.html", error="All fields are required."), 400
-
-    if " " in username:
-        return render_template("register.html", error="Username cannot contain spaces."), 400
-
-    if len(password) < 6:
-        return render_template("register.html", error="Password must be at least 6 characters."), 400
-
-    if password != password2:
-        return render_template("register.html", error="Passwords do not match."), 400
-
-    password_hash = generate_password_hash(password)
-
-    if USING_POSTGRES:
-        with get_db() as conn:
-            cur = conn.execute(
-                """
-                INSERT INTO users (username, password_hash)
-                VALUES (%s, %s)
-                ON CONFLICT (username) DO NOTHING
-                RETURNING id
-                """,
-                (username, password_hash),
-            )
-            row = cur.fetchone()
-            if not row:
-                return render_template("register.html", error="This username is already taken."), 400
-            user_id = row["id"]
-    else:
-        try:
-            with get_db() as conn:
-                cur = conn.execute(
-                    "INSERT INTO users (username, password_hash) VALUES (?, ?)",
-                    (username, password_hash),
-                )
-                user_id = cur.lastrowid
-        except sqlite3.IntegrityError:
-            return render_template("register.html", error="This username is already taken."), 400
-
-    session["user_id"] = user_id
-    _maybe_import_legacy_words_for_user(user_id)
-    return redirect(url_for("home"))
-
-
-@app.route("/logout")
-def logout():
-    session.pop("user_id", None)
-    return redirect(url_for("login"))
+    return render_template("index.html")
 
 
 @app.route("/words", methods=["GET"])
-@login_required_json
-def get_words(user):
+def get_words():
     with get_db() as conn:
         if USING_POSTGRES:
-            rows = conn.execute(
-                "SELECT id, spanish, translation FROM words WHERE user_id = %s ORDER BY id ASC",
-                (user["id"],),
-            ).fetchall()
+            rows = conn.execute("SELECT id, spanish, translation FROM public_words ORDER BY id ASC").fetchall()
         else:
-            rows = conn.execute(
-                "SELECT id, spanish, translation FROM words WHERE user_id = ? ORDER BY id ASC",
-                (user["id"],),
-            ).fetchall()
+            rows = conn.execute("SELECT id, spanish, translation FROM public_words ORDER BY id ASC").fetchall()
     return jsonify([{"id": row["id"], "spanish": row["spanish"], "translation": row["translation"]} for row in rows])
 
 
 @app.route("/words", methods=["POST"])
-@login_required_json
-def add_word(user):
+def add_word():
     data = request.get_json(silent=True) or {}
     spanish = (data.get("spanish") or "").strip()
     translation = (data.get("translation") or "").strip()
@@ -413,12 +200,12 @@ def add_word(user):
         with get_db() as conn:
             cur = conn.execute(
                 """
-                INSERT INTO words (user_id, spanish, spanish_norm, translation)
-                VALUES (%s, %s, %s, %s)
-                ON CONFLICT (user_id, spanish_norm) DO NOTHING
+                INSERT INTO public_words (spanish, spanish_norm, translation)
+                VALUES (%s, %s, %s)
+                ON CONFLICT (spanish_norm) DO NOTHING
                 RETURNING id
                 """,
-                (user["id"], spanish, spanish_norm, translation),
+                (spanish, spanish_norm, translation),
             )
             row = cur.fetchone()
             if not row:
@@ -429,10 +216,10 @@ def add_word(user):
             with get_db() as conn:
                 cur = conn.execute(
                     """
-                    INSERT INTO words (user_id, spanish, spanish_norm, translation)
-                    VALUES (?, ?, ?, ?)
+                    INSERT INTO public_words (spanish, spanish_norm, translation)
+                    VALUES (?, ?, ?)
                     """,
-                    (user["id"], spanish, spanish_norm, translation),
+                    (spanish, spanish_norm, translation),
                 )
                 word_id = cur.lastrowid
         except sqlite3.IntegrityError:
@@ -443,8 +230,7 @@ def add_word(user):
 
 
 @app.route("/import", methods=["POST"])
-@login_required_json
-def import_words(user):
+def import_words():
     items = request.get_json(silent=True)
 
     if not isinstance(items, list):
@@ -475,7 +261,7 @@ def import_words(user):
             if not translation:
                 continue
 
-        to_insert.append((user["id"], spanish, normalize_spanish(spanish), translation))
+        to_insert.append((spanish, normalize_spanish(spanish), translation))
 
     if to_insert:
         if USING_POSTGRES:
@@ -483,9 +269,9 @@ def import_words(user):
                 for args in to_insert:
                     cur = conn.execute(
                         """
-                        INSERT INTO words (user_id, spanish, spanish_norm, translation)
-                        VALUES (%s, %s, %s, %s)
-                        ON CONFLICT (user_id, spanish_norm) DO NOTHING
+                        INSERT INTO public_words (spanish, spanish_norm, translation)
+                        VALUES (%s, %s, %s)
+                        ON CONFLICT (spanish_norm) DO NOTHING
                         RETURNING id
                         """,
                         args,
@@ -497,8 +283,8 @@ def import_words(user):
                 before = conn.total_changes
                 conn.executemany(
                     """
-                    INSERT OR IGNORE INTO words (user_id, spanish, spanish_norm, translation)
-                    VALUES (?, ?, ?, ?)
+                    INSERT OR IGNORE INTO public_words (spanish, spanish_norm, translation)
+                    VALUES (?, ?, ?)
                     """,
                     to_insert,
                 )
@@ -508,19 +294,12 @@ def import_words(user):
 
 
 @app.route("/words/<int:word_id>", methods=["DELETE"])
-@login_required_json
-def delete_word(user, word_id):
+def delete_word(word_id):
     with get_db() as conn:
         if USING_POSTGRES:
-            cur = conn.execute(
-                "DELETE FROM words WHERE id = %s AND user_id = %s",
-                (word_id, user["id"]),
-            )
+            cur = conn.execute("DELETE FROM public_words WHERE id = %s", (word_id,))
         else:
-            cur = conn.execute(
-                "DELETE FROM words WHERE id = ? AND user_id = ?",
-                (word_id, user["id"]),
-            )
+            cur = conn.execute("DELETE FROM public_words WHERE id = ?", (word_id,))
 
     if cur.rowcount == 0:
         return jsonify({"error": "Word not found."}), 404

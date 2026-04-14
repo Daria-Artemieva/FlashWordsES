@@ -28,9 +28,10 @@ if "cgi" not in sys.modules:
     sys.modules["cgi"] = cgi_module
 
 try:
-    from googletrans import Translator
+    from deep_translator import GoogleTranslator, MyMemoryTranslator
 except Exception:
-    Translator = None
+    GoogleTranslator = None
+    MyMemoryTranslator = None
 
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -47,7 +48,6 @@ DEFAULT_DATA_DIR = Path("/tmp/flashwordses") if IS_VERCEL else BASE_DIR
 DATA_DIR = Path(os.environ.get("DATA_DIR", str(DEFAULT_DATA_DIR))).resolve()
 DATA_FILE = Path(__file__).with_name("data.json")
 DB_FILE = Path(os.environ.get("DB_PATH", str(DATA_DIR / "app.db"))).resolve()
-translator = Translator() if Translator else None
 
 
 def get_db():
@@ -132,14 +132,22 @@ def translate_word(spanish, target_language):
     if target_language not in {"en", "uk"}:
         target_language = "en"
 
-    if translator is None:
+    if GoogleTranslator is None and MyMemoryTranslator is None:
         return None
 
     try:
-        result = translator.translate(spanish, src="es", dest=target_language)
-        return result.text
+        if GoogleTranslator is not None:
+            return GoogleTranslator(source="es", target=target_language).translate(spanish)
+    except Exception:
+        pass
+
+    try:
+        if MyMemoryTranslator is not None:
+            return MyMemoryTranslator(source="es", target=target_language).translate(spanish)
     except Exception:
         return None
+
+    return None
 
 
 @app.after_request
@@ -191,8 +199,8 @@ def add_word():
         translation = translate_word(spanish, target_language)
         if not translation:
             return (
-                jsonify({"error": "Translation is required (auto-translation is disabled)."}),
-                400,
+                jsonify({"error": "Auto-translation is unavailable right now."}),
+                503,
             )
 
     spanish_norm = normalize_spanish(spanish)

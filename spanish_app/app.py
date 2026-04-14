@@ -42,7 +42,9 @@ app = Flask(
 )
 app.secret_key = os.environ.get("SECRET_KEY", "dev-secret-key-change-me")
 
-DATA_DIR = Path(os.environ.get("DATA_DIR", str(BASE_DIR))).resolve()
+IS_VERCEL = os.environ.get("VERCEL") == "1"
+DEFAULT_DATA_DIR = Path("/tmp/flashwordses") if IS_VERCEL else BASE_DIR
+DATA_DIR = Path(os.environ.get("DATA_DIR", str(DEFAULT_DATA_DIR))).resolve()
 DATA_FILE = Path(__file__).with_name("data.json")
 DB_FILE = Path(os.environ.get("DB_PATH", str(DATA_DIR / "app.db"))).resolve()
 translator = Translator() if Translator else None
@@ -56,8 +58,13 @@ def get_db():
 
 
 def init_db():
-    DB_FILE.parent.mkdir(parents=True, exist_ok=True)
-    with get_db() as conn:
+    global DB_FILE
+
+    def _init_at(path: Path):
+        path.parent.mkdir(parents=True, exist_ok=True)
+        conn = sqlite3.connect(path)
+        conn.row_factory = sqlite3.Row
+        conn.execute("PRAGMA foreign_keys = ON")
         conn.execute(
             """
             CREATE TABLE IF NOT EXISTS users (
@@ -82,6 +89,19 @@ def init_db():
             )
             """
         )
+        conn.commit()
+        conn.close()
+
+    try:
+        _init_at(DB_FILE)
+    except (OSError, sqlite3.OperationalError):
+        # Vercel Serverless Functions filesystem is read-only except /tmp.
+        # If DB_PATH isn't explicitly set, fall back automatically.
+        if IS_VERCEL and os.environ.get("DB_PATH") is None:
+            DB_FILE = Path("/tmp/flashwordses/app.db")
+            _init_at(DB_FILE)
+        else:
+            raise
 
 
 init_db()
